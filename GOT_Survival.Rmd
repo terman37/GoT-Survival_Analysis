@@ -1,0 +1,189 @@
+---
+title: "Game of Thrones - Survival Analysis"
+output: html_notebook
+---
+
+ <img src="GoT_title3.jpg" alt="title" style="zoom: 100%;" />
+
+# <u>Objectives</u>
+
+Target of this analysis is to study ...
+
+
+# <u>Dataset description</u>
+
+Dataset downloaded from [here](https://figshare.com/articles/Game_of_Thrones_mortality_and_survival_dataset/8259680/1)
+
+Game of Thrones mortality and survival dataset
+
+Dataset posted on 13.06.2019, 10:25 by Reidar Lystad Benjamin Brown
+
+This dataset includes data from Game of Thrones Seasons 1–8. The dataset comprises two separate datasets and an accompanying data dictionary. The character dataset contains 359 observations (i.e. characters) and 35 variables, including information about sociodemographics, exposures, and mortality. The episode dataset contains 73 observations (i.e. episodes) and 8 variables, including information about episode running time.
+
+
+In this study we will use only the character dataset.
+
+### Character dataset
+
+- Number of observations: 359.
+- Outcome: 
+  - **censor_time_hrs** Cumulative net running time before death of character in hours.
+  - NB: complete duration of serie 64.11hrs - if character is not dead by the end of the serie, then outcome=64.11
+- Censoring indicator: 
+  - **dth_flag** = 0 if character is not dead by the end of the serie , = 1 otherwise
+- Explanatory variables:
+  - **sex** of character:
+    1. = Male
+    2. = Female
+  - **religion** (at time of death):
+    1. = Great Stallion
+    2. = Lord of Light
+    3. = Faith of the Seven
+    4. = Old Gods
+    5. = Drowned God
+    6. = Many Faced God
+    7. = Other
+    9. = Unknown/Unclear
+  - **occupation** (at time of death):
+    1. = Silk collar
+    2. = Boiled leather collar
+    9. = Unknown/Unclear
+  - **social_status**:
+    1. = Highborn
+    2. = Lowborn
+  - **allegiance_last**:
+    1. = Stark
+    2. = Targaryen
+    3. = Night's Watch
+    4. = Lannister
+    5. = Greyjoy
+    6. = Bolton
+    7. = Frey
+    8. = Other
+    9. = Unknown/Unclear
+  - **allegiance_switched**:
+    1. = No
+    2. = Yes
+  
+  - others ????
+
+# <u>Data Preparation</u>
+
+load needed libraries
+```{r}
+library(tidyverse)
+library(survival)
+library(ggfortify)
+library(ggplot2)
+```
+
+import datas from csv file:
+```{r}
+setwd("C:/MY_DATAS/MyGit/GoT-Survival_Analysis")
+raw_data =  read.csv("./GoT_dataset/character_data_S01-S08.csv")
+dat = select(raw_data,sex,dth_time_hrs,censor_time_hrs,dth_flag,religion,occupation,social_status,allegiance_last,allegiance_switched)
+```
+
+# <u>Data Exploration</u>
+
+Proportion of people dead before the end of the serie.
+```{r}
+prop.table(table(dat$dth_flag))
+```
+--> roughly 60% of censored datas, the characters in the study are dead before the end of the serie
+
+```{r}
+table(dat$sex)
+```
+--> 70% of character are Males
+
+```{r}
+ggplot(dat, aes(sex, fill = factor(dth_flag))) +
+  geom_bar()
+```
+
+```{r}
+table(dat$religion)
+prop.table(table(dat$religion))
+```
+--> 65% of the population have not known or unclear religion --> Careful to check if meaningful
+
+```{r}
+ggplot(dat, aes(religion, fill = factor(dth_flag))) +
+  geom_bar()
+```
+
+
+
+```{r}
+table(dat$occupation)
+```
+--> most are Boiled leather collar
+
+```{r}
+ggplot(dat, aes(occupation, fill = factor(dth_flag))) +
+  geom_bar()
+```
+
+
+```{r}
+table(dat$social_status)
+prop.table(table(dat$social_status))
+```
+--> 70% are lowborn
+
+
+```{r}
+ggplot(dat, aes(social_status, fill = factor(dth_flag))) +
+  geom_bar()
+```
+
+
+```{r}
+table(dat$allegiance_last)
+prop.table(table(dat$allegiance_last))
+```
+
+```{r}
+ggplot(dat, aes(allegiance_last, fill = factor(dth_flag))) +
+  geom_bar()
+```
+
+```{r}
+table(dat$allegiance_switched)
+prop.table(table(dat$allegiance_switched))
+```
+
+```{r}
+ggplot(dat, aes(allegiance_switched, fill = factor(dth_flag))) +
+  geom_bar()
+```
+
+
+# <u>Kaplan-Meyer estimator</u>
+
+First look at outcome: 
+```{r}
+fit.KM = survfit(Surv(censor_time_hrs, dth_flag) ~ 1, data = dat)
+```
+
+```{r}
+autoplot(fit.KM)
+```
+
+Median Survival Time: 52.9hrs 
+```{r}
+fit.KM
+```
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
