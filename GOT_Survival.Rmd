@@ -67,6 +67,17 @@ In this study we will use only the character dataset.
   
   - others ????
 
+| **sex** (gender)  | **religion**            | **occupation**             |
+| ------------------| ------------------------| ---------------------------|
+| 1. = Male         | 1. = Great Stallion     | 1. = Silk collar           |
+| 2. = Female       | 2. = Lord of Light      | 2. = Boiled leather collar |
+|                   | 3. = Faith of the Seven | 9. = Unknown/Unclear       |
+|                   | 4. = Old Gods           |                            |
+| **social_status** | 5. = Drowned God        | **allegiance_switched**    |
+| 1. = Highborn     | 6. = Many Faced God     | 1. = No                    |
+| 2. = Lowborn      | 7. = Other              | 2. = Yes                   |
+|                   | 9. = Unknown/Unclear    |                            |
+
 # <u>Data Preparation</u>
 
 load needed libraries
@@ -75,13 +86,23 @@ library(tidyverse)
 library(survival)
 library(ggfortify)
 library(ggplot2)
+library(survminer)
 ```
 
 import datas from csv file:
 ```{r}
 setwd("C:/MY_DATAS/MyGit/GoT-Survival_Analysis")
 raw_data =  read.csv("./GoT_dataset/character_data_S01-S08.csv")
-dat = select(raw_data,sex,dth_time_hrs,censor_time_hrs,dth_flag,religion,occupation,social_status,allegiance_last,allegiance_switched)
+dat = select(raw_data,dth_time_hrs,censor_time_hrs,dth_flag,sex,religion,occupation,social_status,allegiance_last,allegiance_switched)
+dat = mutate(dat,
+              sex = c("Male","Female")[match(sex, c(1,2))],
+              religion = c("Great Stallion","Lord of Light","Faith of the Seven","Old Gods","Drowned God","Many Faced God","Other","Unknown/Unclear")[match(religion,c(1,2,3,4,5,6,7,9))],
+              occupation = c("Silk collar","Boiled leather collar","Unknown/Unclear")[match(occupation,c(1,2,9))],
+              social_status = c("Highborn","Lowborn")[match(social_status,c(1,2))],
+              allegiance_last = c("Stark","Targaryen","Night's Watch","Lannister","Greyjoy","Bolton","Frey","Other","Unknown/Unclear")[match(allegiance_last,c(1,2,3,4,5,6,7,8,9))],
+              allegiance_switched = c("No","Yes")[match(allegiance_switched,c(1,2))]
+              )
+
 ```
 
 # <u>Data Exploration</u>
@@ -90,100 +111,172 @@ Proportion of people dead before the end of the serie.
 ```{r}
 prop.table(table(dat$dth_flag))
 ```
---> roughly 60% of censored datas, the characters in the study are dead before the end of the serie
+--> roughly 40% of censored datas, 60% of the characters in the study are dead before the end of the serie
 
-```{r}
-table(dat$sex)
-```
---> 70% of character are Males
 
+Show explanatory variables composition:
 ```{r}
-ggplot(dat, aes(sex, fill = factor(dth_flag))) +
-  geom_bar()
+
+draw_pie_plot <- function(df,col){
+  data = df %>% group_by(df[,col]) %>%
+    count() %>%
+    rename(group = names(.)[1]) %>%
+    ungroup() %>% 
+    mutate(per=`n`/sum(`n`)) %>%
+    arrange(desc(group))
+  
+  data$label = scales::percent(data$per)
+
+  options(repr.plot.width = 14, repr.plot.height = 8)
+  
+  ggplot(data=data)+
+    geom_bar(aes(x="", y=per, fill=group), stat="identity", width = 1)+
+    coord_polar("y", start=0)+
+    theme_void()+
+    geom_text(aes(x=1.3, y = cumsum(per) - per/2, label=label))+
+    scale_fill_discrete(name = col)
+}
+
 ```
 
-```{r}
-table(dat$religion)
-prop.table(table(dat$religion))
+```{r,fig.height=3}
+draw_pie_plot(dat,"sex")
+draw_pie_plot(dat,"religion")
+draw_pie_plot(dat,"occupation")
+draw_pie_plot(dat,"social_status")
+draw_pie_plot(dat,"allegiance_last")
+draw_pie_plot(dat,"allegiance_switched")
 ```
+
 --> 65% of the population have not known or unclear religion --> Careful to check if meaningful
-
-```{r}
-ggplot(dat, aes(religion, fill = factor(dth_flag))) +
-  geom_bar()
-```
-
-
-
-```{r}
-table(dat$occupation)
-```
 --> most are Boiled leather collar
-
-```{r}
-ggplot(dat, aes(occupation, fill = factor(dth_flag))) +
-  geom_bar()
-```
-
-
-```{r}
-table(dat$social_status)
-prop.table(table(dat$social_status))
-```
 --> 70% are lowborn
 
+# <u>Global survival overview</u>
 
-```{r}
-ggplot(dat, aes(social_status, fill = factor(dth_flag))) +
-  geom_bar()
-```
-
-
-```{r}
-table(dat$allegiance_last)
-prop.table(table(dat$allegiance_last))
-```
-
-```{r}
-ggplot(dat, aes(allegiance_last, fill = factor(dth_flag))) +
-  geom_bar()
-```
-
-```{r}
-table(dat$allegiance_switched)
-prop.table(table(dat$allegiance_switched))
-```
-
-```{r}
-ggplot(dat, aes(allegiance_switched, fill = factor(dth_flag))) +
-  geom_bar()
-```
-
-
-# <u>Kaplan-Meyer estimator</u>
-
+**Kaplan-Meyer estimator**
 First look at outcome: 
 ```{r}
 fit.KM = survfit(Surv(censor_time_hrs, dth_flag) ~ 1, data = dat)
-```
-
-```{r}
-autoplot(fit.KM)
+autoplot(fit.KM,conf.int.fill = "#00FF00") + 
+  geom_hline(yintercept=.5, linetype="dashed", color = "red") 
+  #+ coord_cartesian(ylim = c(0,1))
 ```
 
 Median Survival Time: 52.9hrs 
+- As a character, you would have 50% of change to stay alive up to 52.9hrs
+
 ```{r}
 fit.KM
 ```
 
+# <u>Survival vs Explanatory variables</u>
 
+```{r}
+plot_KM <- function(df,col,CI=TRUE){
+  fit = survfit(Surv(df$censor_time_hrs, df$dth_flag) ~ df[,col])
+  autoplot(fit,conf.int=CI) + 
+    geom_hline(yintercept=.5, linetype="dashed", color = "red") 
+    #+ coord_cartesian(ylim = c(0,1))
+}
+
+print_infos <- function(df,col){
+  fit = survfit(Surv(df$censor_time_hrs, df$dth_flag) ~ df[,col])
+  infos_fit = surv_median(fit)
+  infos_fit = infos_fit %>% 
+    mutate(strata=substr(strata,11,100)) %>%
+    rename(CI_Lower=lower,CI_Upper=upper)
+  print(infos_fit)
+  
+  fit_logrank = survdiff(Surv(df$censor_time_hrs, df$dth_flag) ~ df[,col])
+  infos_logrank = broom::glance(fit_logrank)
+  infos_logrank = infos_logrank %>% 
+    select(p.value) %>%
+    rename(logrank_pvalue = p.value)
+  print(infos_logrank)
+}
+
+```
+
+## --> Is gender influencing ?
+
+```{r,fig.height=4,fig.width=7}
+plot_KM(dat,"sex")
+```
+
+```{r}
+print_infos(dat,"sex")
+```
+
+## --> Is religion influencing ?
     
+```{r,fig.height=4,fig.width=7}
+plot_KM(dat,"religion",FALSE)
+``` 
     
+```{r}
+print_infos(dat,"religion")
+```
+
+## --> Is occupation influencing ?
     
+```{r,fig.height=4,fig.width=7}
+plot_KM(dat,"occupation")
+``` 
     
+```{r}
+print_infos(dat,"occupation")
+```
+
+## --> Is social_status influencing ?
     
+```{r,fig.height=4,fig.width=7}
+plot_KM(dat,"social_status")
+``` 
     
+```{r}
+print_infos(dat,"social_status")
+```
+
+## --> Is allegiance_last influencing ?
     
+```{r,fig.height=4,fig.width=7}
+plot_KM(dat,"allegiance_last",FALSE)
+``` 
     
+```{r}
+print_infos(dat,"allegiance_last")
+```
+
+## --> Is allegiance_switched influencing ?
     
+```{r,fig.height=4,fig.width=7}
+plot_KM(dat,"allegiance_switched")
+``` 
     
+```{r}
+print_infos(dat,"allegiance_switched")
+```
+
+# <u>Build a model of Survival time in GoT</u>
+
+```{r}
+Model_Full = coxph(Surv(censor_time_hrs,dth_flag)~sex+religion+occupation+social_status+allegiance_last+allegiance_switched,data=dat)
+
+MAIC = step(Model_Full)
+```
+
+```{r}
+summary(MAIC)
+```
+
+
+
+
+
+
+
+
+
+
+
