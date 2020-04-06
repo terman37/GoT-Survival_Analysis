@@ -55,7 +55,7 @@ import datas from csv file:
 ```{r}
 setwd("C:/MY_DATAS/MyGit/GoT-Survival_Analysis")
 raw_data =  read.csv("./GoT_dataset/character_data_S01-S08.csv")
-dat = select(raw_data,exp_time_hrs,dth_flag,sex,religion,occupation,social_status,allegiance_last,allegiance_switched,prominence)
+dat = select(raw_data,name,exp_time_hrs,dth_flag,sex,religion,occupation,social_status,allegiance_last,allegiance_switched,prominence)
 dat = mutate(dat,
               sex = c("Male","Female")[match(sex, c(1,2))],
               religion = c("Great Stallion","Lord of Light","Faith of the Seven","Old Gods","Drowned God","Many Faced God","Other","Unknown/Unclear")[match(religion,c(1,2,3,4,5,6,7,9))],
@@ -125,6 +125,8 @@ draw_pie_plot(dat,"prominence")
 fit.KM = survfit(Surv(exp_time_hrs, dth_flag) ~ 1, data = dat)
 autoplot(fit.KM,conf.int.fill = "#00FF00") + 
   geom_hline(yintercept=.5, linetype="dashed", color = "red") 
+
+
 ```
 
 Median Survival Time: 28.8hrs
@@ -140,7 +142,7 @@ Used functions
 ```{r}
 plot_KM <- function(df,col,CI=TRUE){
   fit = survfit(Surv(df$exp_time_hrs, df$dth_flag) ~ df[,col])
-  autoplot(fit,conf.int=CI) + 
+  autoplot(fit,conf.int=CI,censor=FALSE) + 
     geom_hline(yintercept=.5, linetype="dashed", color = "red") 
 }
 
@@ -311,8 +313,8 @@ print_medians(dat,"prominence")
 # <u>Build a model of Survival time in GoT</u>
 
 ```{r}
-Model_Full = coxph(Surv(exp_time_hrs,dth_flag)~.,data=dat)
-
+dat_model = select(dat,-name)
+Model_Full = coxph(Surv(exp_time_hrs,dth_flag)~.,data=dat_model)
 MAIC = step(Model_Full)
 ```
 
@@ -322,8 +324,30 @@ MAIC
 
 
 
+# <u>Predict from model for some characters and compare with observed datas</u>
 
+```{r}
+d_new = dat %>% 
+  filter(name %in% c("Arya Stark","Jaime Lannister","Theon Greyjoy","Jon Snow","Eddard Stark","Ramsay Bolton")) %>% 
+  select(-exp_time_hrs,-dth_flag)
 
+z = list()
+
+for(i in 1:nrow(d_new)) {
+    row <- d_new[i,]
+    p_s = survfit(MAIC,newdata = row)
+    z = c(z,list(p_s))
+}
+names(z)=d_new$name
+
+ggsurvplot_combine(z, 
+           conf.int = FALSE,  
+           risk.table = FALSE, 
+           pval = FALSE,
+           censor = FALSE,
+           surv.median.line = "hv",
+           ggtheme = theme_gray())
+```
 
 
 
