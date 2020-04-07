@@ -1,9 +1,6 @@
 ---
 title: "Game of Thrones - Survival Analysis"
-output:
-  html_notebook: default
-  pdf_document: default
-  word_document: default
+output: html_notebook
 ---
 
 ## Description
@@ -45,7 +42,7 @@ In this study we will use only the character dataset.
 # <u>Data Preparation</u>
 
 load needed libraries
-```{r message=FALSE, warning=FALSE}
+```{r}
 library(tidyverse)
 library(survival)
 library(ggfortify)
@@ -81,8 +78,32 @@ prop.table(table(dat$dth_flag))
 
 
 Show explanatory variables composition:
+```{r}
+
+draw_pie_plot <- function(df,col){
+  data = df %>% group_by(df[,col]) %>%
+    count() %>%
+    rename(group = names(.)[1]) %>%
+    ungroup() %>% 
+    mutate(per=`n`/sum(`n`)) %>%
+    arrange(desc(group))
+  
+  data$label = scales::percent(data$per)
+
+  options(repr.plot.width = 14, repr.plot.height = 8)
+  
+  ggplot(data=data)+
+    geom_bar(aes(x="", y=per, fill=group), stat="identity", width = 1)+
+    coord_polar("y", start=0)+
+    theme_void()+
+    geom_text(aes(x=1.3, y = cumsum(per) - per/2, label=label))+
+    scale_fill_discrete(name = col)
+}
+
+```
 
 ```{r fig.height=10, fig.width=10}
+
 d_plot = dat %>%
   select(-name,-exp_time_hrs,-dth_flag) %>%
   gather() %>%
@@ -95,6 +116,19 @@ d_plot %>% ggplot(aes(x=value, y=frequency)) +
     facet_wrap(~ key, scales = "free") +
     geom_bar(stat="identity", fill="steelblue") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    
+```
+
+
+
+```{r,fig.height=3}
+draw_pie_plot(dat,"sex")
+draw_pie_plot(dat,"religion")
+draw_pie_plot(dat,"occupation")
+draw_pie_plot(dat,"social_status")
+draw_pie_plot(dat,"allegiance_last")
+draw_pie_plot(dat,"allegiance_switched")
+draw_pie_plot(dat,"prominence")
 ```
 
 --> 65% of the population have not known or unclear religion --> Careful to check if meaningful
@@ -108,8 +142,10 @@ d_plot %>% ggplot(aes(x=value, y=frequency)) +
 - First look at outcome: 
 ```{r}
 fit.KM = survfit(Surv(exp_time_hrs, dth_flag) ~ 1, data = dat)
-autoplot(fit.KM,conf.int.fill = "#00FF00") +
-  geom_hline(yintercept=.5, linetype="dashed", color = "red")+ ggtitle("Kaplan-Meier estimate with CI")
+autoplot(fit.KM,conf.int.fill = "#00FF00") + 
+  geom_hline(yintercept=.5, linetype="dashed", color = "red") 
+
+
 ```
 
 Median Survival Time: 28.8hrs
