@@ -178,8 +178,7 @@ plot_KM <- function(df,col,CI=TRUE){
 # Print the medians for stratas (+formating)
 print_medians <- function(df,col){
   fit = survfit(Surv(df$exp_time_hrs, df$dth_flag) ~ df[,col])
-  infos_fit = surv_median(fit)
-  infos_fit = infos_fit %>% 
+  infos_fit = surv_median(fit) %>%
     mutate(strata=substr(strata,11,100))
   cat("Medians:\n")
   cat(sprintf("%*s %*s %*s\n",25,"Group",15,"Median",20,"Conf.Interval"))
@@ -202,7 +201,9 @@ print_cox <- function(df,col){
   cox.conf=paste("( ",cox.hr.conflow,";",cox.hr.confhigh," )",sep="")
   cat(sprintf("%*s %*s %*s\n",25,cox.term,15,cox.hr,20,cox.conf))
   y = glance(fit_cox)
-  cox.lrt = ifelse(y$p.value.log<0.01,formatC(y$p.value.log, format = "e", digits = 2),formatC(y$p.value.log, digits = 2))
+  cox.lrt = ifelse(y$p.value.log<0.01,
+                   formatC(y$p.value.log, format = "e", digits = 2),
+                   formatC(y$p.value.log, digits = 2))
   cat(paste("\nLikelihood Ratio Test:",cox.lrt))
 }
 
@@ -359,7 +360,17 @@ MAIC
 
 ```{r}
 d_new = dat %>% 
-  filter(name %in% c("Arya Stark","Jaime Lannister","Theon Greyjoy","Jon Snow","Eddard Stark","Ramsay Bolton","Samwell Tarly","Illyrio Mopatis","Mhaegen","Todder","Merry Frey")) %>% 
+  filter(name %in% c("Arya Stark",
+                     "Jaime Lannister",
+                     "Theon Greyjoy",
+                     "Jon Snow",
+                     "Eddard Stark",
+                     "Ramsay Bolton",
+                     "Samwell Tarly",
+                     "Illyrio Mopatis",
+                     "Mhaegen",
+                     "Todder",
+                     "Merry Frey")) %>% 
   select(-exp_time_hrs,-dth_flag)
 
 z = list()
