@@ -1,9 +1,9 @@
 ---
 title: "Game of Thrones - Survival Analysis"
 output:
-  html_notebook: default
-  pdf_document: default
   word_document: default
+  pdf_document: default
+  html_notebook: default
 ---
 
 ## Description
@@ -58,20 +58,65 @@ import datas from csv file:
 ```{r}
 setwd("C:/MY_DATAS/MyGit/GoT-Survival_Analysis")
 raw_data =  read.csv("./GoT_dataset/character_data_S01-S08.csv")
-dat = select(raw_data,name,exp_time_hrs,dth_flag,sex,religion,occupation,social_status,allegiance_last,allegiance_switched,prominence)
-dat = mutate(dat,
-              sex = c("Male","Female")[match(sex, c(1,2))],
-              religion = c("Great Stallion","Lord of Light","Faith of the Seven","Old Gods","Drowned God","Many Faced God","Other","Unknown/Unclear")[match(religion,c(1,2,3,4,5,6,7,9))],
-              occupation = c("Silk collar","Boiled leather collar","Unknown/Unclear")[match(occupation,c(1,2,9))],
-              social_status = c("Highborn","Lowborn")[match(social_status,c(1,2))],
-              allegiance_last = c("Stark","Targaryen","Night's Watch","Lannister","Greyjoy","Bolton","Frey","Other","Unknown/Unclear")[match(allegiance_last,c(1,2,3,4,5,6,7,8,9))],
-              allegiance_switched = c("No","Yes")[match(allegiance_switched,c(1,2))],
-              prominence = ifelse(prominence>3,"High",ifelse(prominence<1,"Low","Medium"))
-              )
 
+dat = raw_data %>% 
+  select(name,
+         exp_time_hrs,
+         dth_flag,
+         sex,
+         religion,
+         occupation,
+         social_status,
+         allegiance_last,
+         allegiance_switched,
+         prominence
+         ) %>% 
+  mutate(sex = c("Male",
+             "Female")[match(sex, c(1,2))],
+         religion = c("Great Stallion",
+                  "Lord of Light",
+                  "Faith of the Seven",
+                  "Old Gods",
+                  "Drowned God",
+                  "Many Faced God",
+                  "Other",
+                  "Unknown/Unclear")[match(religion,c(1,2,3,4,5,6,7,9))],
+         occupation = c("Silk collar",
+                    "Boiled leather collar",
+                    "Unknown/Unclear")[match(occupation,c(1,2,9))],
+         social_status = c("Highborn",
+                       "Lowborn")[match(social_status,c(1,2))],
+         allegiance_last = c("Stark",
+                         "Targaryen",
+                         "Night's Watch",
+                         "Lannister",
+                         "Greyjoy",
+                         "Bolton",
+                         "Frey",
+                         "Other",
+                         "Unknown/Unclear")[match(allegiance_last,c(1,2,3,4,5,6,7,8,9))],
+         allegiance_switched = c("No",
+                             "Yes")[match(allegiance_switched,c(1,2))],
+         prominence = ifelse(prominence>3,
+                         "High",
+                         ifelse(prominence<1,
+                                "Low",
+                                "Medium")
+                         )
+     )
 ```
 
 # <u>Data Exploration</u>
+
+### Outcome: Survival duration
+```{r}
+summary(dat$exp_time_hrs)
+```
+```{r fig.height=2}
+ggplot(dat,aes(exp_time_hrs)) + geom_histogram(bins = 10, color="black",fill="steelblue")
+```
+
+### Censoring indicator
 
 Proportion of people dead before the end of the serie.
 ```{r}
@@ -79,9 +124,9 @@ prop.table(table(dat$dth_flag))
 ```
 --> roughly 40% of censored datas, 60% of the characters in the study are dead before the end of the serie
 
+### Explanatory variables
 
 Show explanatory variables composition:
-
 ```{r fig.height=10, fig.width=10}
 d_plot = dat %>%
   select(-name,-exp_time_hrs,-dth_flag) %>%
@@ -97,9 +142,9 @@ d_plot %>% ggplot(aes(x=value, y=frequency)) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
---> 65% of the population have not known or unclear religion --> Careful to check if meaningful
---> most are Boiled leather collar
---> 70% are lowborn
+- 65% of the population have not known or unclear religion --> Careful to check if meaningful
+- most are Boiled leather collar
+- 70% are lowborn
 
 # <u>Global survival overview</u>
 
@@ -108,7 +153,7 @@ d_plot %>% ggplot(aes(x=value, y=frequency)) +
 - First look at outcome: 
 ```{r}
 fit.KM = survfit(Surv(exp_time_hrs, dth_flag) ~ 1, data = dat)
-autoplot(fit.KM,conf.int.fill = "#00FF00") +
+autoplot(fit.KM,conf.int.fill = "#00FF00", censor=FALSE) +
   geom_hline(yintercept=.5, linetype="dashed", color = "red")+ ggtitle("Kaplan-Meier estimate with CI")
 ```
 
@@ -123,12 +168,14 @@ fit.KM
 
 Used functions
 ```{r}
+# draw the KM survival curve with stratification with a given exlanatory variable
 plot_KM <- function(df,col,CI=TRUE){
   fit = survfit(Surv(df$exp_time_hrs, df$dth_flag) ~ df[,col])
   autoplot(fit,conf.int=CI,censor=FALSE) + 
     geom_hline(yintercept=.5, linetype="dashed", color = "red") 
 }
 
+# Print the medians for stratas (+formating)
 print_medians <- function(df,col){
   fit = survfit(Surv(df$exp_time_hrs, df$dth_flag) ~ df[,col])
   infos_fit = surv_median(fit)
@@ -140,6 +187,7 @@ print_medians <- function(df,col){
   cat(sprintf("%*s %*s %*s\n",25,infos_fit$strata,15,infos_fit$median,20,fit.conf))
 }
 
+# Print cox regression HR+CI and LRT for stratas (+formating)
 print_cox <- function(df,col){
   fit_cox = coxph(Surv(df$exp_time_hrs, df$dth_flag) ~ df[,col])
   x = tidy(fit_cox)
