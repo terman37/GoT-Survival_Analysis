@@ -52,6 +52,7 @@ library(ggfortify)
 library(ggplot2)
 library(broom)
 library(survminer)
+library(survivalROC)
 ```
 
 import datas from csv file:
@@ -59,7 +60,7 @@ import datas from csv file:
 setwd("C:/MY_DATAS/MyGit/GoT-Survival_Analysis")
 raw_data =  read.csv("./GoT_dataset/character_data_S01-S08.csv")
 
-dat = raw_data %>% 
+dat_full = raw_data %>% 
   select(name,
          exp_time_hrs,
          dth_flag,
@@ -106,6 +107,14 @@ dat = raw_data %>%
      )
 ```
 
+Keep 15% of data for evaluating the final model
+```{r}
+train_size = 85 / 100 * nrow(dat_full)
+idx.dat = sample.int(nrow(dat_full), size = train_size, replace = FALSE)
+dat = dat_full[idx.dat,]
+dat_test = dat_full[-idx.dat,]
+```
+
 # <u>Data Exploration</u>
 
 ### Outcome: Survival duration
@@ -122,7 +131,6 @@ Proportion of people dead before the end of the serie.
 ```{r}
 prop.table(table(dat$dth_flag))
 ```
---> roughly 40% of censored datas, 60% of the characters in the study are dead before the end of the serie
 
 ### Explanatory variables
 
@@ -142,10 +150,6 @@ d_plot %>% ggplot(aes(x=value, y=frequency)) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-- 65% of the population have not known or unclear religion --> Careful to check if meaningful
-- most are Boiled leather collar
-- 70% are lowborn
-
 # <u>Global survival overview</u>
 
 **Kaplan-Meyer estimator**
@@ -158,8 +162,6 @@ autoplot(fit.KM,conf.int.fill = "#00FF00", censor=FALSE) +
   ggtitle("Kaplan-Meier estimate with CI")
 ```
 
-Median Survival Time: 28.8hrs
-- As a character, you would have 50% of change to stay alive on screen up to 28.8hrs
 
 ```{r}
 fit.KM
@@ -220,12 +222,6 @@ plot_KM(dat,"sex")
 print_cox(dat,"sex")
 ```
 
-Likelihood ratio test (LRT) pvalue is very small, proving that there is a significant difference between male and female survival time.
-
- !!!! Hazard ration is 1.87, meaning that male have 1.87 more chances to be killed than women 
-
-Here are the median survival time for each category:
-
 ```{r}
 print_medians(dat,"sex")
 ```
@@ -240,12 +236,6 @@ plot_KM(dat,"religion",FALSE)
 ```{r}
 print_cox(dat,"religion")
 ```
-
-Cox regression LRT pvalue is quite large and > 5% pointing that there is no significant difference between religions 
-
-One thing that can be noted from the graph is that the "Drowned God" religion has a median survival time very low...
-
-If you were of this religion, you would have only 50% chance to survive after 1.11hrs ! (pretty scary)
 
 ```{r}
 print_medians(dat,"religion")
@@ -262,10 +252,6 @@ plot_KM(dat,"occupation")
 print_cox(dat,"occupation")
 ```
 
-LRT pvalue is < 5%, we can say that at least one group is significantly different from other.
-It's certainly due to the group 'Unknown/Unclear' which has an hazard ratio close to 0.5, the 2 others are very close (HR ~ 1).
-this can be also seen on the medians were CI are overlapping.
-
 ```{r}
 print_medians(dat,"occupation")
 ```
@@ -281,8 +267,6 @@ plot_KM(dat,"social_status")
 print_cox(dat,"social_status")
 ```
 
-Again LRT pvalue is <5%, meaning that to be highborn or lowborn is significantly differnt in terms of survival time in GoT.
-
 ```{r}
 print_medians(dat,"social_status")
 ```
@@ -297,10 +281,6 @@ plot_KM(dat,"allegiance_last",FALSE)
 print_cox(dat,"allegiance_last")
 ```
 
-LRT pvalue is < 5%, we can say that at least one group is significantly different from other.
-
-If you allegiance goes to 'Bolton', then you have 0% of chance to be present during all the show.
-But if you follow the 'Greyjoy', the you're median survival time is only of 1.11hrs...
 
 ```{r}
 print_medians(dat,"allegiance_last")
@@ -316,9 +296,6 @@ plot_KM(dat,"allegiance_switched")
 ```{r}
 print_cox(dat,"allegiance_switched")
 ```
-
-pvalue < 5%, the change in allegiance has a real impact on the characters survival times.
-it seems, that in GoT, if you want to maximize your chances to survive, you have to not be too strict with your allegiance.
 
 
 ```{r}
@@ -336,8 +313,7 @@ plot_KM(dat,"prominence")
 print_cox(dat,"prominence")
 ```
 
-Very significant difference, sounds logic for characters with high prominence (stars of the show), that producers decided no to kill them at the begining of the show so their survival time is higher than others.
-It seems more surprising to me, that people with low prominence have a higher survival time than the ones in the middle.
+
 
 ```{r}
 print_medians(dat,"prominence")
@@ -355,12 +331,64 @@ MAIC = step(Model_Full)
 summary(MAIC)
 ```
 
+Check model on test set
+
+```{r fig.width=10}
+lp = predict(MAIC, newdata = dat_test, type="lp")
+ROC_func <- function(t){
+  res = survivalROC(Stime = dat_test$exp_time_hrs,
+            status = dat_test$dth_flag,
+            marker = lp,
+            predict.time = t,
+            method = "KM")
+  with(res, plot(TP ~ FP, type = "l", main = sprintf("t = %.0f, AUC = %.2f", t, AUC)))
+  abline(a = 0, b = 1, lty = 2)
+  res
+}
+layout(matrix(1:6, byrow = TRUE, ncol = 3))
+res.survivalROC.age.sex <- lapply(1:6 * 10, function(t) {
+    ROC_func(t)
+})
+```
+
+```{r}
+dfbetas = residuals(MAIC, type='dfbetas')
+db = sqrt(rowSums(dfbetas^2))
+plot(db,type = 'h')
+abline(h=0)
+
+```
+
+find who is the peak
+```{r}
+idx=names(db[db>1])
+dat[idx,]
+```
+
+```{r}
+dat_new = dat[idx,]
+
+z = list()
+for(i in 1:nrow(dat_new)) {
+    row <- dat_new[i,]
+    p_s = survfit(MAIC,newdata = row)
+    z = c(z,list(p_s))
+}
+names(z)=dat_new$name
+
+ggsurvplot_combine(z,
+           censor = FALSE,
+           ggtheme = theme_gray(),
+           legend="right")
+
+```
+
 
 
 # <u>Predict from model for some characters and compare with observed datas</u>
 
 ```{r}
-d_new = dat %>% 
+d_new = dat %>%
   filter(name %in% c("Arya Stark",
                      "Jaime Lannister",
                      "Theon Greyjoy",
@@ -371,17 +399,17 @@ d_new = dat %>%
                      "Illyrio Mopatis",
                      "Mhaegen",
                      "Todder",
-                     "Merry Frey")) %>% 
+                     "Merry Frey")) %>%
   select(-exp_time_hrs,-dth_flag)
 
 z = list()
 
-for(i in 1:nrow(d_new)) {
-    row <- d_new[i,]
+for(i in 1:nrow(dat_test)) {
+    row <- dat_test[i,]
     p_s = survfit(MAIC,newdata = row)
     z = c(z,list(p_s))
 }
-names(z)=d_new$name
+names(z)=dat_test$name
 
 ggsurvplot_combine(z,
            conf.int = FALSE,
