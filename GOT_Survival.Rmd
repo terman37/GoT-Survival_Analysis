@@ -154,11 +154,12 @@ d_plot %>% ggplot(aes(x=value, y=frequency)) +
 ```{r}
 fit.KM = survfit(Surv(exp_time_hrs, dth_flag) ~ 1, data = dat)
 autoplot(fit.KM,conf.int.fill = "#00FF00", censor=FALSE) +
-  geom_hline(yintercept=.5, linetype="dashed", color = "red")+ ggtitle("Kaplan-Meier estimate with CI")
+  geom_hline(yintercept=.5, linetype="dashed", color = "red") + 
+  ggtitle("Kaplan-Meier estimate with CI")
 ```
 
 Median Survival Time: 28.8hrs
-- As a character, you would have 50% of change to stay alive up to 28.8hrs
+- As a character, you would have 50% of change to stay alive on screen up to 28.8hrs
 
 ```{r}
 fit.KM
@@ -221,7 +222,7 @@ print_cox(dat,"sex")
 
 Likelihood ratio test (LRT) pvalue is very small, proving that there is a significant difference between male and female survival time.
 
- !!!! Hazard ration is 1.87, meaning that male have 1.87 more chances to be killes than women 
+ !!!! Hazard ration is 1.87, meaning that male have 1.87 more chances to be killed than women 
 
 Here are the median survival time for each category:
 
@@ -351,7 +352,7 @@ MAIC = step(Model_Full)
 ```
 
 ```{r}
-MAIC
+summary(MAIC)
 ```
 
 
