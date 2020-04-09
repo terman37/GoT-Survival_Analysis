@@ -270,10 +270,14 @@ MAIC = step(Model_Full)
 summary(MAIC)
 ```
 
+```{r fig.height=7, fig.width=8}
+ggforest(MAIC)
+```
+
 # <u>Evaluating and checking model</u>
 
 ### ROC curve charts
-```{r fig.width=10}
+```{r fig.height=6, fig.width=10}
 lp = predict(MAIC, newdata = dat_test, type="lp")
 ROC_func <- function(t){
   res = survivalROC(Stime = dat_test$exp_time_hrs,
@@ -323,3 +327,19 @@ ggsurvplot_combine(z,
 
 ```
 
+# <u>Conclusions</u>
+```{r}
+dat_full %>% filter(sex == "Female" & 
+                    social_status=="Highborn" & 
+                    (allegiance_last=="Stark" | allegiance_last=="Night's Watch") &
+                    allegiance_switched=="Yes" &
+                    prominence=="High")
+```
+
+```{r}
+dat_full %>% filter(sex == "Male" & 
+                    social_status=="Lowborn" & 
+                    (allegiance_last=="Greyjoy" | allegiance_last=="Bolton") &
+                    allegiance_switched=="No" &
+                    prominence=="Medium")
+```
