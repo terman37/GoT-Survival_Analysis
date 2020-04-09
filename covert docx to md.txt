@@ -1,0 +1,1 @@
+pandoc -f docx -t markdown GOT_Survival_final.docx -o test.md
