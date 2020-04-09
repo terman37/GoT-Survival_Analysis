@@ -128,8 +128,7 @@ summary(dat$exp_time_hrs)
 ggplot(dat,aes(exp_time_hrs)) + geom_histogram(bins = 10, color="black",fill="steelblue")
 ```
 
-![](media/image3.png){width="5.0526312335958in"
-height="2.021052055993001in"}
+![](media/image3.png)
 
 Median screen time for characters is almost 19 hours and 75% are not able to be on screen more than 40 hours, but it can be because they are dead or because the show has ended (careful with histograms and censored data)
 
@@ -164,8 +163,7 @@ d_plot %>% ggplot(aes(x=value, y=frequency)) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-![](media/image4.png){width="7.235576334208224in"
-height="7.402597331583552in"}
+![](media/image4.png)
 
 <u>Main things to have in mind during analysis:</u>
 
@@ -189,8 +187,7 @@ autoplot(fit.KM,conf.int.fill = "#00FF00", censor=FALSE) +
   ggtitle("Kaplan-Meier estimate with CI")
 ```
 
-![](media/image5.png){width="5.0526312335958in"
-height="4.0421052055993in"}
+![](media/image5.png)
 
 Median Survival Time: 29.9hrs - As a character, you would have 50% of change to appear on screen up to 30hrs .
 
@@ -256,8 +253,7 @@ print_cox <- function(df,col){
 plot_KM(dat,"sex")
 ```
 
-![](media/image6.png){width="5.833333333333333in"
-height="3.3333333333333335in"}
+![](media/image6.png)
 
 ```R
 print_cox(dat,"sex")
@@ -291,8 +287,7 @@ print_medians(dat,"sex")
 plot_KM(dat,"religion",FALSE)
 ```
 
-![](media/image7.png){width="5.833333333333333in"
-height="3.3333333333333335in"}
+![](media/image7.png)
 
 ```R
 print_cox(dat,"religion")
@@ -336,8 +331,7 @@ print_medians(dat,"religion")
 plot_KM(dat,"occupation")
 ```
 
-![](media/image8.png){width="5.833333333333333in"
-height="3.3333333333333335in"}
+![](media/image8.png)
 
 ```R
 print_cox(dat,"occupation")
@@ -370,8 +364,7 @@ print_medians(dat,"occupation")
 plot_KM(dat,"social_status")
 ```
 
-![](media/image9.png){width="5.833333333333333in"
-height="3.3333333333333335in"}
+![](media/image9.png)
 
 ```R
 print_cox(dat,"social_status")
@@ -399,8 +392,7 @@ print_medians(dat,"social_status")
 plot_KM(dat,"allegiance_last",FALSE)
 ```
 
-![](media/image10.png){width="5.833333333333333in"
-height="3.3333333333333335in"}
+![](media/image10.png)
 
 ```R
 print_cox(dat,"allegiance_last")
@@ -444,8 +436,7 @@ print_medians(dat,"allegiance_last")
 plot_KM(dat,"allegiance_switched")
 ```
 
-![](media/image11.png){width="5.833333333333333in"
-height="3.3333333333333335in"}
+![](media/image11.png)
 
 ```R
 print_cox(dat,"allegiance_switched")
@@ -475,8 +466,7 @@ print_medians(dat,"allegiance_switched")
 plot_KM(dat,"prominence")
 ```
 
-![](media/image12.png){width="5.833333333333333in"
-height="3.3333333333333335in"}
+![](media/image12.png)
 
 ```R
 print_cox(dat,"prominence")
@@ -595,8 +585,7 @@ A more readable way to show model:
 ggforest(MAIC)
 ```
 
-![](media/image13.png){width="5.480015310586177in"
-height="5.155843175853018in"}
+![](media/image13.png)
 
 Most important things to note from model:
 
@@ -637,8 +626,7 @@ res.survivalROC.age.sex <- lapply(1:6 * 10, function(t) {
 })
 ```
 
-![](media/image14.png){width="5.664501312335958in"
-height="3.1428576115485565in"}
+![](media/image14.png)
 
 From the ROC curves and AUC scores we can see that predictions on test set are pretty stable for estimation to survive for 10,20,30,40,50,60 hours (AUC \~ 0.7). the model predicting power is better for predicting survival at 50 hours (AUC = 0.85)
 
@@ -651,8 +639,7 @@ plot(db,type = 'h')
 abline(h=0)
 ```
 
-![](media/image15.png){width="4.675324803149606in"
-height="2.4415583989501313in"}
+![](media/image15.png)
 
 One case seems to have a larger impact on final estimates, let's find who it is:
 
@@ -675,7 +662,7 @@ names(z)=dat_new$name
 ggsurvplot_combine(z, censor = FALSE, ggtheme = theme_gray(), legend="right")
 ```
 
-![](media/image17.png){width="4.73125in" height="2in"}
+![](media/image17.png)
 
 As we can see, Ramsay Bolton seems to be an exception to survival predictions. If we look at prediction curve based on model it seems that is chance to survive 31.18 hours (as observed) is extremely low, but indeed he did it. If there is no mistake in observed data, model could be improved by removing this one from dataset.
 
@@ -709,7 +696,7 @@ dat_full %>% filter(sex == "Female" &
                     prominence=="High")
 ```
 
-![](media/image18.png){width="7.5625in" height="0.7722222222222223in"}
+![](media/image18.png)
 
 As we can see these 3 characters have not been killed during the show, the 2 first ones have been onscreen during all the duration of the show.
 
@@ -734,8 +721,7 @@ dat_full %>% filter(sex == "Male" &
                     prominence=="Medium")
 ```
 
-![](media/image19.png){width="7.337661854768154in"
-height="1.9486242344706912in"}
+![](media/image19.png)
 
 Here we find again our exception 'Ramsay Bolton' which has a quite high survival time.
 
