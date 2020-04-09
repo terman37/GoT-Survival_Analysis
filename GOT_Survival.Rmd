@@ -8,7 +8,7 @@ output:
 # Description
 
 - Author: Anthony Jourdan
-- Date: 8 april 2020
+- Date: 10 april 2020
 
  <img src="GoT_title.jpg" alt="title" style="zoom: 100%;" />
 
